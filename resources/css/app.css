@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    .label {
+        @apply block mb-1 text-zinc-500 dark:text-zinc-300 font-medium;
+    }
+
+    .input {
+        @apply block w-full p-2 rounded-md shadow-sm border border-zinc-300 dark:border-zinc-600 text-zinc-500;
+    }
+
+    .input-filter-l {
+        @apply placeholder:text-zinc-400 dark:placeholder:text-zinc-600 border border-zinc-200 dark:border-zinc-700 rounded-tr-none rounded-tl-md rounded-b-md rounded-r-none text-sm font-medium text-zinc-600 dark:text-zinc-800;
+    }
+
+    .input-filter-r {
+        @apply placeholder:text-zinc-400 dark:placeholder:text-zinc-600 border border-l-0 border-zinc-200 dark:border-zinc-700 rounded-tr-md rounded-tl-none rounded-bl-none rounded-br-md text-sm font-medium text-zinc-600 dark:text-zinc-800;
+    }
+
+    .input-error {
+        @apply text-sm text-red-600 hover:text-red-300 transition-colors;
+    }
+
+    .btn-normal {
+        @apply bg-zinc-600 hover:bg-zinc-500 text-white font-medium p-2 rounded-md;
+    }
+
+    .btn-primary {
+        @apply bg-orange-600 hover:bg-orange-500 hover:text-zinc-50 text-white font-medium p-2 rounded-md;
+    }
+
+    h1 {
+        @apply text-xl font-bold;
+    }
+
+    h2 {
+        @apply text-lg font-semibold;
+    }
+
+    a {
+        @apply font-bold hover:text-orange-300 transition-colors;
+    }
+
+    span,
+    a,
+    h2,
+    h1 {
+        @apply text-orange-600;
+    }
+}
