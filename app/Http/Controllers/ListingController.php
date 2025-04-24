@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Listing;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,15 +19,42 @@ class ListingController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
+        $query = Listing::with(['owner', 'category']);  // Eager load owner and category
+
+        // Handle search functionality
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where(function($q) use ($search) {
+                $q->where('tradeWhat', 'like', "%{$search}%")
+                  ->orWhere('forWhat', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by category if provided
+        if ($request->has('category') && $request->get('category')) {
+            $query->where('category_id', $request->get('category'));
+        }
+
+        $listings = $query->orderByDesc('created_at')
+                         ->paginate(9)
+                         ->withQueryString();
+
+        // Add status display information to each listing
+        foreach ($listings as $listing) {
+            $listing->status_display = $listing->getStatusDisplay();
+        }
+
         return inertia(
             'Listing/Index',
             [
-                'listings' => Listing::with('owner')  // Eager load owner
-                    ->orderByDesc('created_at')
-                    ->paginate(9)
-                    ->withQueryString()
+                'listings' => $listings,
+                'filters' => [
+                    'search' => $request->get('search', ''),
+                    'category' => $request->get('category', '')
+                ],
+                'categories' => Category::select('id', 'name')->orderBy('name')->get()
             ]
         );
     }
@@ -40,7 +68,9 @@ class ListingController extends Controller
     {
         $this->authorize('create', $listing);
 
-        return inertia('Listing/Create');
+        return inertia('Listing/Create', [
+            'categories' => Category::select('id', 'name')->orderBy('name')->get()
+        ]);
     }
 
     /**
@@ -51,32 +81,17 @@ class ListingController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'tradeWhat' => 'required|string',
-            'forWhat' => 'required|string'
+            'forWhat' => 'required|string',
+            'category_id' => 'required|exists:categories,id'
         ]);
 
-        $request->user()->listings()->create($request->all());
+        $request->user()->listings()->create($validated);
 
         return redirect()->route('listing.index')
             ->with('success', 'Listing was created!');
     }
-
-    /**
- * Show the form for creating an offer based on the specified listing.
- *
- * @param  Listing  $listing
- * @return \Illuminate\Http\Response
- */
-    public function createOffer(Listing $listing)
-    {
-        // Eager load the owner relationship for the listing
-        $listing->load('owner');
-
-        return inertia('Listing/CreateOffer', [
-            'listing' => $listing
-        ]);
-}
 
     /**
      * Display the specified resource.
@@ -86,12 +101,16 @@ class ListingController extends Controller
      */
     public function show(Listing $listing)
     {
-        // Eager load the owner relationship
-        $listing->load('owner');
+        // Eager load the owner and category relationships
+        $listing->load(['owner', 'category']);
+        
+        // Add status display information
+        $listing->status_display = $listing->getStatusDisplay();
 
         return inertia('Listing/Show', [
             'listing' => $listing,
-            'owner' => $listing->owner // Pass the owner information to the view
+            'owner' => $listing->owner, // Pass the owner information to the view
+            'category' => $listing->category
         ]);
     }
 
@@ -106,7 +125,8 @@ class ListingController extends Controller
         return inertia(
             'Listing/Edit',
             [
-                'listing' => $listing
+                'listing' => $listing,
+                'categories' => Category::select('id', 'name')->orderBy('name')->get()
             ]
         );
     }
@@ -120,12 +140,13 @@ class ListingController extends Controller
      */
     public function update(Request $request, Listing $listing)
     {
-        $request->validate([
+        $validated = $request->validate([
             'tradeWhat' => 'required|string',
-            'forWhat' => 'required|string'
+            'forWhat' => 'required|string',
+            'category_id' => 'required|exists:categories,id'
         ]);
 
-        $listing->update($request->all());
+        $listing->update($validated);
 
         return redirect()->route('listing.index')
             ->with('success', 'Listing was changed!');
@@ -143,5 +164,26 @@ class ListingController extends Controller
 
         return redirect()->back()
             ->with('success', 'Listing was deleted!');
+    }
+    
+    /**
+     * Update the status of the listing.
+     *
+     * @param  Request  $request
+     * @param  Listing  $listing
+     * @return \Illuminate\Http\Response
+     */
+    public function updateStatus(Request $request, Listing $listing)
+    {
+        $this->authorize('update', $listing);
+        
+        $validated = $request->validate([
+            'status' => 'required|in:available,pending,completed',
+        ]);
+
+        $listing->update(['status' => $validated['status']]);
+
+        return redirect()->back()
+            ->with('success', 'Listing status updated!');
     }
 }

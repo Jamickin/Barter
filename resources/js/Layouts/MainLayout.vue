@@ -13,17 +13,32 @@
                             {{ authUser.name }}
                         </Link>
                     </div>
+
+                    <!-- Messages Link with Notification Indicator -->
+                    <Link :href="route('messages.index')" class="relative">
+                        <span>Messages</span>
+                        <span
+                            v-if="unreadMessagesCount > 0"
+                            class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full"
+                        >
+                            {{
+                                unreadMessagesCount > 9
+                                    ? "9+"
+                                    : unreadMessagesCount
+                            }}
+                        </span>
+                    </Link>
+
                     <Link :href="route('listing.create')" class="btn-primary">
                         + NEW LISTING
                     </Link>
                     <div>
-                        <Link
-                            :href="route('logout')"
-                            as="button"
-                            class="input-error"
-                        >
-                            Logout
-                        </Link>
+                        <!-- Replace Link with form submit for proper POST logout -->
+                        <form @submit.prevent="logout">
+                            <button type="submit" class="input-error">
+                                Logout
+                            </button>
+                        </form>
                     </div>
                 </div>
                 <div v-else class="flex gap-4 items-center">
@@ -46,10 +61,18 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { Link, usePage } from "@inertiajs/vue3";
+import { computed, onMounted } from "vue";
+import { Link, usePage, router } from "@inertiajs/vue3";
 
 const page = usePage();
 const flashSuccess = computed(() => page.props.flash.success);
 const authUser = computed(() => page.props.auth.user); // Reference the authenticated user
+const unreadMessagesCount = computed(
+    () => page.props.auth.unreadMessagesCount || 0
+);
+
+// Logout function that uses POST method
+const logout = () => {
+    router.post(route("logout"));
+};
 </script>

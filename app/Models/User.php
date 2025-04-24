@@ -22,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
     ];
 
     /**
@@ -46,11 +47,39 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    
+    /**
+     * Get the listings for the user.
+     */
     public function listings(): HasMany 
     {
         return $this->hasMany(
             \App\Models\Listing::class,
             'by_user_id'
         );
+    }
+    
+    /**
+     * Get the messages sent by the user.
+     */
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'from_user_id');
+    }
+    
+    /**
+     * Get the messages received by the user.
+     */
+    public function receivedMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'to_user_id');
+    }
+    
+    /**
+     * Get count of unread messages for the user.
+     */
+    public function unreadMessagesCount()
+    {
+        return $this->receivedMessages()->where('read', false)->count();
     }
 }

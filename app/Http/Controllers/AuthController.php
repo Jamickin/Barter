@@ -24,13 +24,13 @@ class AuthController extends Controller
                 'email' => 'Authentication Failed'
             ]);
         }
-        $request -> session()->regenerate();
+        $request->session()->regenerate();
 
         return redirect()->intended('listing')
         ->with('success', 'Logged in as ' . Auth::user()->name);
     }
 
-    public function destroy (Request $request)
+    public function destroy(Request $request)
     {
         Auth::logout();
 
@@ -39,6 +39,5 @@ class AuthController extends Controller
 
         return redirect()->route('listing.index')
         ->with('success', 'User Logged Out');
-       
     }
 }

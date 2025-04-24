@@ -4,6 +4,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Listing;
+use App\Models\Category;
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,6 +15,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
+        // Seed categories first
+        $this->call(CategorySeeder::class);
+        
+        // Get all categories for random assignment
+        $categories = Category::all();
+        
         // Create users
         $users = User::factory(10)->create();
         $users->push(
@@ -33,9 +40,13 @@ class DatabaseSeeder extends Seeder
 
         // Create listings for each user
         foreach ($users as $user) {
-            Listing::factory()->count(rand(1, 5))->create([
+            Listing::factory()->count(rand(1, 5))->make([
                 'by_user_id' => $user->id,
-            ]);
+            ])->each(function ($listing) use ($categories) {
+                // Assign a random category to each listing
+                $listing->category_id = $categories->random()->id;
+                $listing->save();
+            });
         }
     }
 }
