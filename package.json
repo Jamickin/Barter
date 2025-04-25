@@ -3,7 +3,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build",
+        "build": "vite build && echo '/* /index.html  200' > ./dist/_redirects",
         "fix:eslint": "eslint -c .js,.vue resources/js/ --fix"
     },
     "devDependencies": {
@@ -19,6 +19,7 @@
         "vite": "^5.0"
     },
     "dependencies": {
-        "@inertiajs/vue3": "^1.0.16"
+        "@inertiajs/vue3": "^1.0.16",
+        "firebase": "^11.6.0"
     }
 }

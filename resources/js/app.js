@@ -7,8 +7,8 @@ import "../css/app.css";
 
 createInertiaApp({
     resolve: async (name) => {
-        const pages = import.meta.glob("./Pages/**/*.vue", { eager: true });
-        const page = await pages[`./Pages/${name}.vue`];
+        const pages = import.meta.glob("./Pages/**/*.vue");
+        const page = await pages[`./Pages/${name}.vue`]();
         page.default.layout = page.default.layout || MainLayout;
         return page;
     },
@@ -18,5 +18,9 @@ createInertiaApp({
             .use(Ziggy)
             .use(ZiggyVue)
             .mount(el);
+    },
+    progress: {
+        color: "#ea580c", // Brand orange
+        showSpinner: true,
     },
 });
