@@ -16,18 +16,21 @@
                         </h1>
                     </div>
 
-                    <div v-if="authUser" class="flex items-center gap-4">
+                    <div v-if="currentUser" class="flex items-center gap-4">
                         <div class="text-sm text-zinc-600 dark:text-zinc-400">
                             <Link
-                                :href="route('profile.show', authUser.id)"
+                                :href="route('profile.show', currentUser.uid)"
                                 class="flex items-center gap-2"
                             >
                                 <div
                                     class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xs uppercase"
                                 >
-                                    {{ authUser.name.charAt(0) }}
+                                    {{
+                                        currentUser.displayName?.charAt(0) ||
+                                        "U"
+                                    }}
                                 </div>
-                                <span>{{ authUser.name }}</span>
+                                <span>{{ currentUser.displayName }}</span>
                             </Link>
                         </div>
 
@@ -57,14 +60,12 @@
                         </Link>
 
                         <div>
-                            <form @submit.prevent="logout">
-                                <button
-                                    type="submit"
-                                    class="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                                >
-                                    Logout
-                                </button>
-                            </form>
+                            <button
+                                @click="logout"
+                                class="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                            >
+                                Logout
+                            </button>
                         </div>
                     </div>
 
@@ -84,7 +85,7 @@
 
         <main class="container mx-auto p-4 w-full flex-grow">
             <div
-                v-if="flashSuccess"
+                v-if="flashMessage"
                 class="mb-6 border rounded-md shadow-sm border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900 p-4 fade-in flex items-center"
             >
                 <svg
@@ -99,7 +100,7 @@
                         clip-rule="evenodd"
                     />
                 </svg>
-                {{ flashSuccess }}
+                {{ flashMessage }}
             </div>
 
             <slot>Default</slot>
@@ -121,18 +122,73 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from "vue";
-import { Link, usePage, router } from "@inertiajs/vue3";
+import { computed, ref, onMounted, onUnmounted } from "vue";
+import { Link, router } from "@inertiajs/vue3";
+import { authAPI, messageAPI } from "@/services/firebase-api";
+import { auth } from "@/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
-const page = usePage();
-const flashSuccess = computed(() => page.props.flash.success);
-const authUser = computed(() => page.props.auth.user);
-const unreadMessagesCount = computed(
-    () => page.props.auth.unreadMessagesCount || 0
-);
+// Flash message handling
+const flashMessage = ref(null);
 
-// Logout function that uses POST method
-const logout = () => {
-    router.post(route("logout"));
+// Set flash message from query params if present
+onMounted(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get("message");
+    if (message) {
+        flashMessage.value = message;
+        // Clear the message from URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+
+        // Auto-hide flash message after 5 seconds
+        setTimeout(() => {
+            flashMessage.value = null;
+        }, 5000);
+    }
+});
+
+// Auth state
+const currentUser = ref(null);
+const unreadMessagesCount = ref(0);
+let unsubscribeAuth = null;
+
+// Set up auth state listener
+onMounted(() => {
+    unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+        currentUser.value = user;
+
+        // If user is logged in, fetch unread messages count
+        if (user) {
+            try {
+                unreadMessagesCount.value = await messageAPI.getUnreadCount();
+            } catch (error) {
+                console.error("Error fetching unread messages count:", error);
+            }
+        }
+    });
+});
+
+// Clean up auth listener when component is unmounted
+onUnmounted(() => {
+    if (unsubscribeAuth) {
+        unsubscribeAuth();
+    }
+});
+
+// Handle logout
+const logout = async () => {
+    try {
+        await authAPI.logout();
+
+        // Redirect to login page with success message
+        router.visit(route("login"), {
+            data: {
+                message: "You have been successfully logged out",
+            },
+        });
+    } catch (error) {
+        console.error("Error logging out:", error);
+    }
 };
 </script>
